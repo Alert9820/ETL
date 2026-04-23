@@ -33,8 +33,9 @@ BASE_DIR.mkdir(exist_ok=True)
 DB_PATH = BASE_DIR / "analytics.db"
 
 # Serve frontend
-if Path("index.html").exists():
-    app.mount("/static", StaticFiles(directory="."), name="static")
+BASE_PATH = Path(__file__).parent
+if (BASE_PATH / "index.html").exists():
+    app.mount("/static", StaticFiles(directory=str(BASE_PATH)), name="static")
 
 # In-memory session store (job_id → results)
 SESSIONS: dict = {}
@@ -439,8 +440,9 @@ def run_etl_pipeline(raw_bytes: bytes, filename: str, job_id: str) -> dict:
 # ── API Routes ────────────────────────────────────────────────────────────────
 @app.get("/")
 async def serve_ui():
-    if Path("index.html").exists():
-        return FileResponse("index.html")
+    html_path = Path(__file__).parent / "index.html"
+    if html_path.exists():
+        return FileResponse(str(html_path))
     return {"message": "Smart ETL API running. Upload a CSV to /upload"}
 
 @app.post("/upload")
