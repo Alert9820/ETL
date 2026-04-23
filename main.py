@@ -92,14 +92,14 @@ def smart_impute(df: pd.DataFrame, col_types: dict) -> tuple[pd.DataFrame, list]
             continue
         if ctype in ("numeric", "binary", "categorical_num"):
             fill = df[col].median()
-            df[col].fillna(fill, inplace=True)
+            df[col] = df[col].fillna(fill)
             logs.append(f"'{col}': filled {missing} missing with median ({fill:.2f})")
         elif ctype == "datetime":
-            df[col].fillna(method="ffill", inplace=True)
+            df[col] = df[col].ffill()
             logs.append(f"'{col}': forward-filled {missing} missing datetime values")
         else:
             fill = df[col].mode()[0] if not df[col].mode().empty else "Unknown"
-            df[col].fillna(fill, inplace=True)
+            df[col] = df[col].fillna(fill)
             logs.append(f"'{col}': filled {missing} missing with mode ('{fill}')")
     return df, logs
 
