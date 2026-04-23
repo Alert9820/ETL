@@ -4,7 +4,7 @@ FastAPI + Pandas + Scikit-learn + XGBoost
 Handles 50K-100K+ rows automatically
 """
 
-import os, io, json, sqlite3, uuid, traceback, warnings
+import os, io, json, sqlite3, uuid, traceback, warnings, math
 from pathlib import Path
 from typing import Optional
 import numpy as np
@@ -22,6 +22,23 @@ from sklearn.metrics import (mean_squared_error, r2_score,
 from sklearn.impute import SimpleImputer
 import xgboost as xgb
 warnings.filterwarnings("ignore")
+
+def clean_for_json(obj):
+    """Recursively clean NaN/Inf values so JSON serialization never fails."""
+    if isinstance(obj, dict):
+        return {k: clean_for_json(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [clean_for_json(v) for v in obj]
+    elif isinstance(obj, float):
+        if math.isnan(obj) or math.isinf(obj):
+            return None
+        return obj
+    elif hasattr(obj, 'item'):  # numpy scalar
+        val = obj.item()
+        if isinstance(val, float) and (math.isnan(val) or math.isinf(val)):
+            return None
+        return val
+    return obj
 
 # ── App Setup ────────────────────────────────────────────────────────────────
 app = FastAPI(title="Smart ETL API", version="1.0.0")
@@ -445,6 +462,7 @@ async def serve_ui():
         return FileResponse(str(html_path))
     return {"message": "Smart ETL API running. Upload a CSV to /upload"}
 
+
 @app.post("/upload")
 async def upload_csv(file: UploadFile = File(...)):
     if not file.filename.lower().endswith(".csv"):
@@ -464,7 +482,7 @@ async def upload_csv(file: UploadFile = File(...)):
 async def get_results(job_id: str):
     if job_id not in SESSIONS:
         raise HTTPException(404, "Job not found")
-    return JSONResponse(SESSIONS[job_id])
+    return JSONResponse(clean_for_json(SESSIONS[job_id]))
 
 @app.get("/download/{job_id}")
 async def download_cleaned(job_id: str):
